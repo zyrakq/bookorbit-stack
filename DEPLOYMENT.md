@@ -52,7 +52,7 @@ Mandatory infra verdicts (always attempted):
 |-------|---------|--------|
 | database | **REQUIRED — as `database/postgresql` stage** | Drizzle migrations + app-mandated extensions (`uuid-ossp`, `pg_trgm`, `unaccent`, `vector`). Documented incompatibility with the collection default `postgres:alpine` (no pgvector): the postgresql stage pins `pgvector/pgvector:pg18` (upstream-pinned major 18 justified by the pgvector requirement). Wired per the §8 dual-file extension pair. |
 | database/pgrust | **WORKS — tested at Stage A2** | Hypothesis of a `vector` refusal was wrong: `malisper/pgrust:v0.2` reports "pgrust 0.2 (PostgreSQL 18.3 compatible)" and ships pgvector — `init-extensions.sql` enabled all four app-mandated extensions (`uuid-ossp`, `pg_trgm`, `unaccent`, `vector`; verified via `SELECT extname FROM pg_extension`). App booted healthy on it (Nest started, HTTP 200). postgresql stage remains the default (upstream-pinned pgvector image); pgrust is a validated drop-in swap. |
-| OIDC | **REQUIRED — mandatory infra per §10, staged after the base gate** | Native OIDC/SSO support upstream (README: Authentik, Keycloak, Authelia); provider configured against the collection OIDC provider; `DISABLE_LOCAL_AUTH` available for SSO-only once validated. Attempted as a base stage (Stage B), not a confirmation-gated extension. |
+| OIDC | **WORKS — tested at Stage B (browser SSO gate passed)** | Native OIDC/SSO support upstream. Provider config is stored in the DB via the admin settings UI (Settings → SERVER → Users & Access → OIDC / SSO → Add Provider) — **no env vars for issuer/clientId/secret**. Kanidm client `bookorbit`, redirect `https://bookorbit.af/oauth2-callback`, scopes `openid profile email groups`. Two requirements discovered: `OIDC_ALLOW_LOCAL_ISSUERS=true` is REQUIRED (app throws `PrivateAddressException` on the private-IP kanidm host otherwise), and the provider's **"Auto-provision users" switch must be enabled** in the provider edit form (first SSO attempt without it hit "Your account has not been set up"). Full flow verified: login button → Kanidm auth → consent → callback → auto-provisioned user → active dashboard. `DISABLE_LOCAL_AUTH` available for SSO-only once validated. |
 | s3-storage | **REFUSED** | No object-storage abstraction anywhere upstream (no s3/boto/minio hits); book files and app data are local-filesystem only (`/books`, `/data` volumes). |
 
 Functional base = 1× `bookorbit` service (`ghcr.io/bookorbit/bookorbit`) +
@@ -82,14 +82,18 @@ Cross-part functional gate scenario (Stage A):
    WORKS** — pgrust v0.2 ships pgvector; all four app-mandated extensions
    enabled, app healthy (see §3 verdict table).
 3. **Stage B (oidc)**: OIDC wiring + browser SSO gate; keep the tested
-   no-oidc variant as proof of the pre-OIDC step.
+   no-oidc variant as proof of the pre-OIDC step. **Result: WORKS** —
+   provider configured via the admin settings UI against kanidm
+   (`OIDC_ALLOW_LOCAL_ISSUERS=true` + auto-provision toggle required, see
+   §3); full browser SSO flow passed (login → Kanidm auth → consent →
+   callback → auto-provisioned user dashboard).
 4. No further groups → no `step-ca-trust` stages, no cross-group link gates.
 
 ## 5. Extension catalog (nothing implemented without confirmation except mandatory infra)
 
 | extension | type | status | dependencies |
 |-----------|------|--------|--------------|
-| oidc | infra (mandatory per §10) | staged (implement after Stage A) | provider (kanidm) |
+| oidc | infra (mandatory per §10) | **works (tested at Stage B)** | provider (kanidm); `OIDC_ALLOW_LOCAL_ISSUERS=true` + auto-provision toggle |
 | database/pgrust | infra | **works (tested at A2)** | swaps postgresql at A2 |
 | tts-kokoro | product companion | available | none; internal 8880 |
 | read-aloud-worker | product companion | available | needs same books volume mounted ro + own read-aloud data dir |
@@ -98,9 +102,10 @@ Cross-part functional gate scenario (Stage A):
 
 ## 6. Open hypotheses (validate at base stage)
 
-- OIDC wiring surface: upstream documents OIDC in its own installation docs
-  (bookorbit.app/installation); exact env names for issuer/client must be
-  pulled from the upstream docs before Stage B (confidence: medium).
+- OIDC wiring surface: **RESOLVED at Stage B** — provider config lives in the
+  DB (`app_settings` key `oidc_config`), entered via the admin settings UI;
+  no env vars for issuer/clientId/secret. Only `OIDC_ALLOW_LOCAL_ISSUERS`
+  (extension fragment, default false) is env-wired.
 - Healthcheck endpoint for the app image: identify an in-container check
   (curl/wget presence unknown) — compose may need a node-based check
   (confidence: medium; observe at Stage A).
