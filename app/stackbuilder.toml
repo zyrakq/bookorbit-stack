@@ -4,7 +4,7 @@ extensions_dirs = ["extensions/database"]
 
 [build]
 skip_base_generation = true
-yaml_merger = "yq"
+yaml_merger = "rust"
 # Extension pool: pgrust is present but NOT wired into any combo yet
 # (Stage A2 swap edits `entire` to ["pgrust"]).
 extensions = ["postgresql", "pgrust"]
