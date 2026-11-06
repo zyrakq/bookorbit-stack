@@ -8,7 +8,7 @@ x-logging: &default-logging
 services:
   bookorbit:
     container_name: bookorbit
-    image: ${IMAGE:-ghcr.io/bookorbit/bookorbit:v3.6.0}
+    image: ${IMAGE:-ghcr.io/bookorbit/bookorbit:3.6.0}
     restart: unless-stopped
     init: true
     logging: *default-logging
