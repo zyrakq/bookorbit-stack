@@ -96,7 +96,7 @@ Cross-part functional gate scenario (Stage A):
 | oidc | infra (mandatory per §10) | **works (tested at Stage B)** | provider (kanidm); `OIDC_ALLOW_LOCAL_ISSUERS=true` + auto-provision toggle |
 | database/pgrust | infra | **works (tested at A2)** | swaps postgresql at A2 |
 | tts-kokoro | product companion | **works (tested at extension stage)** | none; internal 8880 |
-| read-aloud-worker | product companion | available | needs same books volume mounted ro + own read-aloud data dir |
+| read-aloud-worker | product companion | **works (tested at extension stage)** | needs same books volume mounted ro + own read-aloud data dir (subpath mount) |
 | koreader-plugin | client-side | available (document only, not compose) | KOReader device; needs public app URL |
 | s3-storage | infra | **refused** | no upstream S3 support |
 

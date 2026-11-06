@@ -1,0 +1,73 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILE:-3}
+    compress: ${LOG_COMPRESS:-true}
+
+services:
+  # Read-aloud worker (upstream opt-in `read-aloud` profile). Internal-only:
+  # the app reaches it at http://bookorbit-readaloud:8787 via
+  # READ_ALOUD_WORKER_URL; auth is a shared Bearer token. It reads the
+  # library read-only and works only in the read-aloud subfolder of the app
+  # data volume (subpath mount keeps the rest of /data invisible to it).
+  # No kokoro dependency: read-aloud aligns existing audiobook files; TTS is
+  # a separate upstream profile consumed by the app itself.
+  bookorbit-readaloud:
+    container_name: bookorbit-readaloud
+    image: ${READ_ALOUD_WORKER_IMAGE:-ghcr.io/bookorbit/bookorbit-read-aloud-worker:latest}
+    restart: unless-stopped
+    init: true
+    logging: *default-logging
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      READ_ALOUD_WORKER_TOKEN: ${READ_ALOUD_WORKER_TOKEN:-}
+      READ_ALOUD_LIBRARY_ROOTS: ${READ_ALOUD_LIBRARY_ROOTS:-/books}
+      READ_ALOUD_WORK_ROOT: /data/read-aloud/jobs
+    depends_on:
+      bookorbit:
+        condition: service_healthy
+    expose:
+      - "8787"
+    volumes:
+      - bookorbit-books:/books:ro
+      - type: volume
+        source: bookorbit-data
+        target: /data/read-aloud
+        volume:
+          subpath: read-aloud
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "fetch(''http://127.0.0.1:8787/health'',{headers:{authorization:''Bearer ''+process.env.READ_ALOUD_WORKER_TOKEN}}).then(r=>{if(!r.ok)process.exit(1)})"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - bookorbit-network
+
+  # App-side wiring: the app learns the worker URL and shares the token.
+  bookorbit:
+    environment:
+      READ_ALOUD_WORKER_URL: http://bookorbit-readaloud:8787
+      READ_ALOUD_WORKER_TOKEN: ${READ_ALOUD_WORKER_TOKEN:-}
+      READ_ALOUD_MAX_OUTPUT_BYTES: ${READ_ALOUD_MAX_OUTPUT_BYTES:-21474836480}
+
+volumes:
+  bookorbit-books:
+    name: bookorbit-books
+  bookorbit-data:
+    name: bookorbit-data
+
+networks:
+  bookorbit-network:
+    name: bookorbit-network

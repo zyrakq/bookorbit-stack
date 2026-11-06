@@ -39,6 +39,9 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?}"
       POSTGRES_DB: "${POSTGRES_DB:?}"
       OIDC_ALLOW_LOCAL_ISSUERS: "${OIDC_ALLOW_LOCAL_ISSUERS:-false}"
+      READ_ALOUD_WORKER_URL: "http://bookorbit-readaloud:8787"
+      READ_ALOUD_WORKER_TOKEN: "${READ_ALOUD_WORKER_TOKEN:-}"
+      READ_ALOUD_MAX_OUTPUT_BYTES: "${READ_ALOUD_MAX_OUTPUT_BYTES:-21474836480}"
     volumes:
       - "bookorbit-books:/books"
       - "bookorbit-data:/data"
@@ -82,6 +85,50 @@ services:
       test:
         - CMD-SHELL
         - "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8880/v1/audio/voices')\""
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - bookorbit-network
+  bookorbit-readaloud:
+    container_name: bookorbit-readaloud
+    image: "${READ_ALOUD_WORKER_IMAGE:-ghcr.io/bookorbit/bookorbit-read-aloud-worker:latest}"
+    restart: unless-stopped
+    init: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "${LOG_MAX_SIZE:-10m}"
+        max-file: "${LOG_MAX_FILE:-3}"
+        compress: "${LOG_COMPRESS:-true}"
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      READ_ALOUD_WORKER_TOKEN: "${READ_ALOUD_WORKER_TOKEN:-}"
+      READ_ALOUD_LIBRARY_ROOTS: "${READ_ALOUD_LIBRARY_ROOTS:-/books}"
+      READ_ALOUD_WORK_ROOT: /data/read-aloud/jobs
+    depends_on:
+      bookorbit:
+        condition: service_healthy
+    expose:
+      - "8787"
+    volumes:
+      - "bookorbit-books:/books:ro"
+      - type: volume
+        source: bookorbit-data
+        target: /data/read-aloud
+        volume:
+          subpath: read-aloud
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    stop_grace_period: 60s
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "node -e \"fetch('http://127.0.0.1:8787/health',{headers:{authorization:'Bearer '+process.env.READ_ALOUD_WORKER_TOKEN}}).then(r=>{if(!r.ok)process.exit(1)})\""
       interval: 30s
       timeout: 10s
       retries: 5
