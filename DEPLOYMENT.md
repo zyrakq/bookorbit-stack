@@ -51,7 +51,7 @@ Mandatory infra verdicts (always attempted):
 | infra | verdict | reason |
 |-------|---------|--------|
 | database | **REQUIRED — as `database/postgresql` stage** | Drizzle migrations + app-mandated extensions (`uuid-ossp`, `pg_trgm`, `unaccent`, `vector`). Documented incompatibility with the collection default `postgres:alpine` (no pgvector): the postgresql stage pins `pgvector/pgvector:pg18` (upstream-pinned major 18 justified by the pgvector requirement). Wired per the §8 dual-file extension pair. |
-| database/pgrust | attempted at swap stage, **expected REFUSE** | pgrust image cannot guarantee the app-mandated pgvector/`vector` extension; test per §9 step 4, revert to postgresql with this reason recorded. |
+| database/pgrust | **WORKS — tested at Stage A2** | Hypothesis of a `vector` refusal was wrong: `malisper/pgrust:v0.2` reports "pgrust 0.2 (PostgreSQL 18.3 compatible)" and ships pgvector — `init-extensions.sql` enabled all four app-mandated extensions (`uuid-ossp`, `pg_trgm`, `unaccent`, `vector`; verified via `SELECT extname FROM pg_extension`). App booted healthy on it (Nest started, HTTP 200). postgresql stage remains the default (upstream-pinned pgvector image); pgrust is a validated drop-in swap. |
 | OIDC | **REQUIRED — mandatory infra per §10, staged after the base gate** | Native OIDC/SSO support upstream (README: Authentik, Keycloak, Authelia); provider configured against the collection OIDC provider; `DISABLE_LOCAL_AUTH` available for SSO-only once validated. Attempted as a base stage (Stage B), not a confirmation-gated extension. |
 | s3-storage | **REFUSED** | No object-storage abstraction anywhere upstream (no s3/boto/minio hits); book files and app data are local-filesystem only (`/books`, `/data` volumes). |
 
@@ -78,7 +78,9 @@ Cross-part functional gate scenario (Stage A):
    `pgvector/pgvector:pg18` image, `pg_isready` healthcheck, app
    `depends_on: service_healthy`). Run the gate scenario above.
 2. **Stage A2 (pgrust swap)**: swap `database/pgrust` into the build; if it
-   fails on missing `vector` extension → revert, record refusal.
+   fails on missing `vector` extension → revert, record refusal. **Result:
+   WORKS** — pgrust v0.2 ships pgvector; all four app-mandated extensions
+   enabled, app healthy (see §3 verdict table).
 3. **Stage B (oidc)**: OIDC wiring + browser SSO gate; keep the tested
    no-oidc variant as proof of the pre-OIDC step.
 4. No further groups → no `step-ca-trust` stages, no cross-group link gates.
@@ -88,7 +90,7 @@ Cross-part functional gate scenario (Stage A):
 | extension | type | status | dependencies |
 |-----------|------|--------|--------------|
 | oidc | infra (mandatory per §10) | staged (implement after Stage A) | provider (kanidm) |
-| database/pgrust | infra | available → expected refused | swaps postgresql at A2 |
+| database/pgrust | infra | **works (tested at A2)** | swaps postgresql at A2 |
 | tts-kokoro | product companion | available | none; internal 8880 |
 | read-aloud-worker | product companion | available | needs same books volume mounted ro + own read-aloud data dir |
 | koreader-plugin | client-side | available (document only, not compose) | KOReader device; needs public app URL |
