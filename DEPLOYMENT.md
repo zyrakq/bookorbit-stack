@@ -13,7 +13,7 @@ Analysis clone: /tmp/opencode/upstreams/bookorbit (kept for stack-init Phase 1)
 | postgres database | required infra, separate container | upstream compose service `postgres`, image `pgvector/pgvector:pg18`; app REQUIRES pgvector (`vector`) plus `uuid-ossp`, `pg_trgm`, `unaccent` (docker/postgres/init.sql; docs: "PostgreSQL 18 + pgvector") |
 | kokoro TTS | opt-in product companion | upstream compose profile `tts`, `ghcr.io/remsky/kokoro-fastapi-cpu:v0.8.0`, internal-only 8880; app calls `http://kokoro:8880/v1` (OpenAI-compatible TTS) |
 | read-aloud-worker | opt-in product companion | upstream compose profile `read-aloud`, `ghcr.io/bookorbit/bookorbit-read-aloud-worker:latest`, internal-only 8787, `depends_on: app healthy`, mounts `/books:ro` + shared `/data/read-aloud`, Bearer-token auth |
-| KOReader plugin | client-side artifact | `koreader-plugin/` in repo — installs on the KOReader device, not a deployable compose part |
+| KOReader plugin | client-side artifact | `koreader-plugin/bookorbit.koplugin/` (Lua) — installs into `koreader/plugins/` on the device; server-side counterpart (`/koreader/*` sync API + preconfigured-plugin download) is already inside the app image (`server/src/modules/koreader/`), so no extra compose service, env, or proxy path |
 
 Volumes: `/books` (book library, local filesystem) and `/data` (app data) on the
 app; `/var/lib/postgresql/data` on the DB.
@@ -97,7 +97,7 @@ Cross-part functional gate scenario (Stage A):
 | database/pgrust | infra | **works (tested at A2)** | swaps postgresql at A2 |
 | tts-kokoro | product companion | **works (tested at extension stage)** | none; internal 8880 |
 | read-aloud-worker | product companion | **works (tested at extension stage)** | needs same books volume mounted ro + own read-aloud data dir (subpath mount) |
-| koreader-plugin | client-side | available (document only, not compose) | KOReader device; needs public app URL |
+| koreader-plugin | client-side | **implemented (doc-only — nothing deployable)** | no compose part: plugin zip is generated/served by the app itself (Settings > KOReader → "Download preconfigured plugin", embeds server URL + credentials); manual path: copy `koreader-plugin/bookorbit.koplugin/` from the upstream repo into `koreader/plugins/` on the device, restart KOReader, create credentials in Settings > KOReader (upstream `koreader-plugin/README.md`) |
 | s3-storage | infra | **refused** | no upstream S3 support |
 
 ## 6. Open hypotheses (validate at base stage)
