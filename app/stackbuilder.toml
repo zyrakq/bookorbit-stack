@@ -5,13 +5,12 @@ extensions_dirs = ["extensions/database"]
 [build]
 skip_base_generation = true
 yaml_merger = "rust"
-# Extension pool: pgrust is present but NOT wired into any combo yet
-# (Stage A2 swap edits `entire` to ["pgrust"]).
+# Extension pool: pgrust is the default database (validated at Stage A2).
 extensions = ["postgresql", "pgrust"]
 
 [build.combos]
-# ONE base combo = the functional base (app + database/postgresql).
-entire = ["postgresql"]
+# ONE base combo = the functional base (app + database/pgrust).
+entire = ["pgrust"]
 
 [build.environments]
 available = ["forwarding", "letsencrypt", "step-ca"]

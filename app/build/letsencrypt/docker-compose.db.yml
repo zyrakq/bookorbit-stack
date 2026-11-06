@@ -8,7 +8,7 @@ x-logging: &default-logging
 services:
   bookorbit-db:
     container_name: bookorbit-db
-    image: ${DB_IMAGE:-pgvector/pgvector:pg18}
+    image: ${DB_IMAGE:-malisper/pgrust:v0.2}
     restart: unless-stopped
     logging: *default-logging
     environment:
