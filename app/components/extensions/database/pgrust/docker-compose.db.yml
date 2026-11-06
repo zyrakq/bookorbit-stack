@@ -1,0 +1,51 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILE:-3}
+    compress: ${LOG_COMPRESS:-true}
+
+services:
+  bookorbit-db:
+    container_name: bookorbit-db
+    image: ${DB_IMAGE:-malisper/pgrust:v0.2}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      TZ: ${TZ:-UTC}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_INITDB_ARGS: ${POSTGRES_INITDB_ARGS:-}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # App-mandated extensions (upstream docker/postgres/init.sql):
+    # uuid-ossp, pg_trgm, unaccent, vector — applied on first init.
+    configs:
+      - source: init-extensions
+        target: /docker-entrypoint-initdb.d/init-extensions.sql
+    volumes:
+      - bookorbit-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - bookorbit-network
+
+volumes:
+  bookorbit-db:
+    name: bookorbit-db
+
+networks:
+  bookorbit-network:
+    name: bookorbit-network
+
+configs:
+  init-extensions:
+    content: |
+      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+      CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- for fuzzy text search
+      CREATE EXTENSION IF NOT EXISTS "unaccent"; -- for accent-insensitive search
+      CREATE EXTENSION IF NOT EXISTS "vector"; -- for pgvector ANN search

@@ -1,0 +1,53 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILE:-3}
+    compress: ${LOG_COMPRESS:-true}
+
+services:
+  bookorbit:
+    container_name: bookorbit
+    image: ${IMAGE:-ghcr.io/bookorbit/bookorbit:v3.6.0}
+    restart: unless-stopped
+    init: true
+    logging: *default-logging
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      JWT_SECRET: ${JWT_SECRET:?}
+      PODCAST_ENCRYPTION_KEY: ${PODCAST_ENCRYPTION_KEY:-}
+      SETUP_BOOTSTRAP_TOKEN: ${SETUP_BOOTSTRAP_TOKEN:?}
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      DISABLE_LOCAL_AUTH: ${DISABLE_LOCAL_AUTH:-false}
+    volumes:
+      - bookorbit-books:/books
+      - bookorbit-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    networks:
+      - bookorbit-network
+
+volumes:
+  bookorbit-books:
+    name: bookorbit-books
+  bookorbit-data:
+    name: bookorbit-data
+
+networks:
+  bookorbit-network:
+    name: bookorbit-network

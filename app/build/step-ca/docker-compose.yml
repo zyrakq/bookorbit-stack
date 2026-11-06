@@ -1,0 +1,68 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILE:-3}
+    compress: ${LOG_COMPRESS:-true}
+services:
+  bookorbit:
+    container_name: bookorbit
+    image: ${IMAGE:-ghcr.io/bookorbit/bookorbit:v3.6.0}
+    restart: unless-stopped
+    init: true
+    logging: *default-logging
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      JWT_SECRET: ${JWT_SECRET:?}
+      PODCAST_ENCRYPTION_KEY: ${PODCAST_ENCRYPTION_KEY:-}
+      SETUP_BOOTSTRAP_TOKEN: ${SETUP_BOOTSTRAP_TOKEN:?}
+      TZ: ${TZ:-UTC}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      DISABLE_LOCAL_AUTH: ${DISABLE_LOCAL_AUTH:-false}
+      APP_URL: ${APP_URL:-https://${VIRTUAL_HOST}}
+      CLIENT_URL: ${CLIENT_URL:-${APP_URL:-https://${VIRTUAL_HOST}}}
+      VIRTUAL_PORT: ${VIRTUAL_PORT:-3000}
+      VIRTUAL_HOST: ${VIRTUAL_HOST:?}
+      LETSENCRYPT_HOST: ${LETSENCRYPT_HOST:?}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:?}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@bookorbit-db:5432/${POSTGRES_DB:?}}
+      POSTGRES_HOST: bookorbit-db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+    volumes:
+      - bookorbit-books:/books
+      - bookorbit-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    networks:
+      - bookorbit-network
+      - step-ca-network
+    depends_on:
+      bookorbit-db:
+        condition: service_healthy
+volumes:
+  bookorbit-books:
+    name: bookorbit-books
+  bookorbit-data:
+    name: bookorbit-data
+networks:
+  bookorbit-network:
+    name: bookorbit-network
+  step-ca-network:
+    external: true

@@ -1,0 +1,29 @@
+[paths]
+environments_path = "./environments"
+extensions_dirs = ["extensions/database"]
+
+[build]
+skip_base_generation = true
+yaml_merger = "yq"
+# Extension pool: pgrust is present but NOT wired into any combo yet
+# (Stage A2 swap edits `entire` to ["pgrust"]).
+extensions = ["postgresql", "pgrust"]
+
+[build.combos]
+# ONE base combo = the functional base (app + database/postgresql).
+entire = ["postgresql"]
+
+[build.environments]
+available = ["forwarding", "letsencrypt", "step-ca"]
+
+[build.environments.forwarding]
+extensions = []
+combos = ["entire"]
+
+[build.environments.letsencrypt]
+extensions = []
+combos = ["entire"]
+
+[build.environments.step-ca]
+extensions = []
+combos = ["entire"]
