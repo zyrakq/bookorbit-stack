@@ -1,0 +1,17 @@
+services:
+  bookorbit:
+    environment:
+      # Node trusts the step-ca root CA for outbound TLS (OIDC discovery
+      # against kanidm.af behind step-ca-proxy).
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-/step-ca-root/root_ca.crt}
+    volumes:
+      - type: volume
+        source: step-ca-data
+        target: /step-ca-root
+        read_only: true
+        volume:
+          subpath: certs
+
+volumes:
+  step-ca-data:
+    external: true

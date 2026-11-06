@@ -1,16 +1,19 @@
 [paths]
 environments_path = "./environments"
-extensions_dirs = ["extensions/database"]
+extensions_dirs = ["extensions/database", "extensions"]
 
 [build]
 skip_base_generation = true
 yaml_merger = "rust"
-# Extension pool: pgrust is the default database (validated at Stage A2).
-extensions = ["postgresql", "pgrust"]
+# Extension pool: pgrust is the default database (validated at Stage A2);
+# oidc is mandatory infra (§10) — provider configured via admin settings UI.
+extensions = ["postgresql", "pgrust", "oidc", "step-ca-trust"]
 
 [build.combos]
-# ONE base combo = the functional base (app + database/pgrust).
-entire = ["pgrust"]
+# ONE base combo = the functional base (app + database/pgrust + oidc).
+entire = ["pgrust", "oidc"]
+# step-ca variant adds CA trust for outbound TLS (OIDC discovery).
+entire-trust = ["pgrust", "oidc", "step-ca-trust"]
 
 [build.environments]
 available = ["forwarding", "letsencrypt", "step-ca"]
@@ -25,4 +28,4 @@ combos = ["entire"]
 
 [build.environments.step-ca]
 extensions = []
-combos = ["entire"]
+combos = ["entire-trust"]
