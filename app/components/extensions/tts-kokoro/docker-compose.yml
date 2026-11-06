@@ -1,0 +1,39 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILE:-3}
+    compress: ${LOG_COMPRESS:-true}
+
+services:
+  # Kokoro TTS (upstream opt-in `tts` profile). Internal-only: bookorbit
+  # consumes it as an "openai-compatible" TTS provider registered in the
+  # admin settings UI (or tts_providers DB row) at
+  # http://bookorbit-tts:8880/v1 — no app env vars for it.
+  bookorbit-tts:
+    container_name: bookorbit-tts
+    image: ${KOKORO_IMAGE:-ghcr.io/remsky/kokoro-fastapi-cpu:v0.8.0}
+    restart: unless-stopped
+    init: true
+    logging: *default-logging
+    expose:
+      - "8880"
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request;urllib.request.urlopen(''http://127.0.0.1:8880/v1/audio/voices'')"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - bookorbit-network
+
+networks:
+  bookorbit-network:
+    name: bookorbit-network

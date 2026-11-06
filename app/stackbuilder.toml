@@ -7,13 +7,15 @@ skip_base_generation = true
 yaml_merger = "rust"
 # Extension pool: pgrust is the default database (validated at Stage A2);
 # oidc is mandatory infra (§10) — provider configured via admin settings UI.
-extensions = ["postgresql", "pgrust", "oidc", "step-ca-trust"]
+# tts-kokoro is an opt-in product companion (DEPLOYMENT.md catalog):
+# provider registered in the admin settings UI at http://bookorbit-tts:8880/v1.
+extensions = ["postgresql", "pgrust", "oidc", "step-ca-trust", "tts-kokoro"]
 
 [build.combos]
 # ONE base combo = the functional base (app + database/pgrust + oidc).
-entire = ["pgrust", "oidc"]
+entire = ["pgrust", "oidc", "tts-kokoro"]
 # step-ca variant adds CA trust for outbound TLS (OIDC discovery).
-entire-trust = ["pgrust", "oidc", "step-ca-trust"]
+entire-trust = ["pgrust", "oidc", "step-ca-trust", "tts-kokoro"]
 
 [build.environments]
 available = ["forwarding", "letsencrypt", "step-ca"]
