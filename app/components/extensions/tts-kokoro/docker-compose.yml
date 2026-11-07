@@ -4,12 +4,7 @@ x-logging: &default-logging
     max-size: ${LOG_MAX_SIZE:-10m}
     max-file: ${LOG_MAX_FILE:-3}
     compress: ${LOG_COMPRESS:-true}
-
 services:
-  # Kokoro TTS (upstream opt-in `tts` profile). Internal-only: bookorbit
-  # consumes it as an "openai-compatible" TTS provider registered in the
-  # admin settings UI (or tts_providers DB row) at
-  # http://bookorbit-tts:8880/v1 — no app env vars for it.
   bookorbit-tts:
     container_name: bookorbit-tts
     image: ${KOKORO_IMAGE:-ghcr.io/remsky/kokoro-fastapi-cpu:v0.8.0}
@@ -33,7 +28,6 @@ services:
       start_period: 60s
     networks:
       - bookorbit-network
-
 networks:
   bookorbit-network:
     name: bookorbit-network

@@ -1,8 +1,4 @@
 services:
   bookorbit:
     environment:
-      # Provider config (issuer URI, client ID/secret) is set in the app's
-      # admin settings UI and stored in the database (app_settings.oidc_config)
-      # — no env vars for it. APP_URL (web callback base, wired per
-      # environment) must match the redirect URL registered on the provider.
       OIDC_ALLOW_LOCAL_ISSUERS: ${OIDC_ALLOW_LOCAL_ISSUERS:-false}
